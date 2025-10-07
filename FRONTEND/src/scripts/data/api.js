@@ -17,7 +17,11 @@ export async function signUp(email, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.msg || data.message || 'Sign up failed');
+  }
+  return data;
 }
 
 export async function signIn(email, password) {
@@ -26,7 +30,11 @@ export async function signIn(email, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  return res.json(); // includes { token: "..." }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.msg || data.message || 'Login failed');
+  }
+  return data; // includes { token: "..." }
 }
 
 export async function addCheck(data) {
@@ -59,5 +67,32 @@ export async function deleteAllChecks() {
     method: 'DELETE',
     headers: getAuthHeader(),
   });
+  return res.json();
+}
+
+// Password reset (Mailtrap-backed) helpers
+export async function requestPasswordReset(email) {
+  const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.msg || errorData.message || 'Gagal mengirim tautan reset');
+  }
+  return res.json();
+}
+
+export async function resetPassword(token, password) {
+  const res = await fetch(`${API_BASE}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.msg || errorData.message || 'Gagal mereset kata sandi');
+  }
   return res.json();
 }

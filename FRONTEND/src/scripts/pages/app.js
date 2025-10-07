@@ -14,8 +14,10 @@ class App {
   _checkAuthAndRedirect() {
     const token = Auth.getToken();
     const currentRoute = getActiveRoute();
-    
-    if (!token && currentRoute !== '/auth' && currentRoute !== '/') {
+    // Allow unauthenticated access to auth, home root, forgot/reset password routes
+    const publicRoutes = ['/', '/auth', '/forgot-password', '/reset-password'];
+
+    if (!token && !publicRoutes.includes(currentRoute)) {
       window.location.hash = '#/auth';
     } else if (token && (currentRoute === '/auth' || currentRoute === '/')) {
       window.location.hash = '#/home';

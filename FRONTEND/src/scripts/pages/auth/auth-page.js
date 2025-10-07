@@ -343,7 +343,11 @@ export default class AuthPage {
                         </button>
                       </div>
                     </div>
-  
+
+                    <div style="text-align: right; margin: -8px 0 16px 0">
+                      <a href="#/forgot-password" style="font-size: 14px; color: rgb(37, 99, 235); text-decoration: none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Lupa kata sandi?</a>
+                    </div>
+
                     <button
                       type="submit"
                       id="signin-btn"
@@ -904,7 +908,8 @@ export default class AuthPage {
               alert(response.message || 'Login failed');
             }
           } catch (err) {
-            alert('Server error. Please try again later.');
+            console.error('Login error:', err);
+            alert(err.message || 'Server error. Please try again later.');
           }
         });
       }
@@ -935,7 +940,8 @@ export default class AuthPage {
               alert(response.message || 'Sign up failed');
             }
           } catch (err) {
-            alert('Server error. Please try again later.');
+            console.error('Signup error:', err);
+            alert(err.message || 'Server error. Please try again later.');
           }
           
         });

@@ -1,9 +1,11 @@
 function extractPathnameSegments(path) {
   const splitUrl = path.split('/');
+  // Remove any query string from segments so '#/reset-password?token=...' matches '/reset-password'
+  const clean = (seg) => (seg ? seg.split('?')[0] : null);
 
   return {
-    resource: splitUrl[1] || null,
-    id: splitUrl[2] || null,
+    resource: clean(splitUrl[1]) || null,
+    id: clean(splitUrl[2]) || null,
   };
 }
 

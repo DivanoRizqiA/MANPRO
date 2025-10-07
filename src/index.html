@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="favicon-heart.png">
+
+    <title>Diateksi</title>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-container">
+        <div class="header-content">
+          <!-- Logo -->
+          <a href="/" class="logo-link">
+            <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+            </svg>
+            <span class="logo-text">Diateksi</span>
+          </a>
+    
+          <!-- Navigation -->
+          <nav class="nav">
+            <a href="#/home" class="nav-link">Risk Checker</a>
+            <a href="#/about" class="nav-link" id="history-link">
+              <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>History</span>
+            </a>
+            <a href="#/auth" class="nav-link" id="auth-link">Sign In</a>
+          </nav>
+    
+          <!-- User Actions -->
+          <div class="user-actions">
+            <!-- Authenticated -->
+            <div class="user-authenticated" id="auth-section" style="display: none;">
+              <span class="user-email" id="user-email">Welcome, user</span>
+              <button class="logout-button">
+                <svg class="logout-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                <span>Logout</span>
+              </button>
+            </div>
+    
+            <!-- Not Authenticated -->
+            <a href="#/auth" class="login-button" id="login-button" style="display: none;">
+              <svg class="login-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+              <span>Login</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div id="loading" class="loading-spinner">
+      <div class="spinner"></div>
+    </div>
+
+    <main id="main-content" class="main-content"></main>
+  </body>
+</html>

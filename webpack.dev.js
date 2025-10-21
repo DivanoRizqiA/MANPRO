@@ -18,6 +18,17 @@ module.exports = merge(common, {
   devServer: {
     static: path.resolve(__dirname, 'dist'),
     port: 9000,
+    // Serve over HTTPS to avoid insecure password field warnings
+    server: 'https',
+    // Proxy API calls to backend to avoid mixed content
+    proxy: [
+      {
+        context: ['/api'],
+        target: 'http://localhost:7000',
+        changeOrigin: true,
+        secure: false,
+      },
+    ],
     client: {
       overlay: {
         errors: true,

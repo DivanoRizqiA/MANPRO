@@ -7,8 +7,9 @@ import Auth from './data/auth';
 const checkAuth = () => {
   const token = Auth.getToken();
   const currentPath = window.location.hash.slice(1) || '/';
-  
-  if (!token && currentPath !== '/auth' && currentPath !== '/') {
+  const publicRoutes = ['/', '/auth', '/forgot-password', '/reset-password'];
+
+  if (!token && !publicRoutes.includes(currentPath)) {
     window.location.hash = '#/auth';
   } else if (token && (currentPath === '/auth' || currentPath === '/')) {
     window.location.hash = '#/home';

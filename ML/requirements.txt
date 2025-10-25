@@ -1,11 +1,8 @@
-﻿pandas
+Flask
 numpy
 scikit-learn
-matplotlib
-seaborn
-yellowbrick
-imblearn
-tensorflow
+pandas
 joblib
-Flask
-flask-cors
+gunicorn
+tensorflow
+h5py

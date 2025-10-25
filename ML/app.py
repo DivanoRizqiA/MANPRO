@@ -1,64 +1,59 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 import numpy as np
-import pandas as pd
 import joblib
-import os
 from tensorflow.keras.models import load_model
 
-# Load model dan scaler
-model = load_model(os.path.join("saved_model", "cnn_model.h5"))
-scaler = joblib.load(os.path.join("saved_model", "cnn_scaler.pkl"))
-
-# Kolom yang harus dilog-transform
-LOG_COLS = ["Insulin", "DiabetesPedigreeFunction", "Age", "Pregnancies"]
-
-# Urutan kolom sesuai training
-ORDERED_COLUMNS = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin',
-                   'BMI', 'DiabetesPedigreeFunction', 'Age', 'dummy_0']
-
 app = Flask(__name__)
-CORS(app)
+
+# Load Model & Scaler
+model = load_model("final_model.h5")
+scaler = joblib.load("scaler.pkl")
 
 @app.route('/')
 def home():
     return "API is up and running!"
 
-
-@app.route('/predict', methods=['POST'])
+@app.route("/predict", methods=["POST"])
 def predict():
     try:
         data = request.get_json()
-        df_input = pd.DataFrame([data])
 
-        # Log transform
-        for col in LOG_COLS:
-            if col in df_input:
-                df_input[col] = np.log1p(df_input[col])
+        required_fields = [
+            "Pregnancies","Glucose","BloodPressure","SkinThickness",
+            "Insulin","BMI","DiabetesPedigreeFunction","Age"
+        ]
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Input JSON tidak lengkap"}), 400
 
-        # Tambahkan dummy_0 jika tidak ada
-        if 'dummy_0' not in df_input.columns:
-            df_input['dummy_0'] = 0
-
-        # Pastikan kolom sesuai urutan yang benar
-        df_input = df_input[ORDERED_COLUMNS]
+        input_data = np.array([[
+            data["Pregnancies"],
+            data["Glucose"],
+            data["BloodPressure"],
+            data["SkinThickness"],
+            data["Insulin"],
+            data["BMI"],
+            data["DiabetesPedigreeFunction"],
+            data["Age"]
+        ]])
 
         # Scaling
-        input_scaled = scaler.transform(df_input)
-
-        # Reshape untuk CNN (batch_size, 3, 3, 1)
-        input_reshaped = input_scaled.reshape(-1, 3, 3, 1)
+        input_scaled = scaler.transform(input_data)
 
         # Prediksi
-        prediction = model.predict(input_reshaped)[0][0]
-        
-        return jsonify({
-            "prediction": int(prediction >= 0.5),
-            "risk_percentage": round(float(prediction) * 100, 2)
-        })
+        prob = float(model.predict(input_scaled)[0][0])
+        pred = 1 if prob >= 0.5 else 0
+
+        # ✅ Hanya probability & status
+        result = {
+            "probability": round(prob * 100, 2),
+            "status": "Diabetes" if pred == 1 else "Tidak Diabetes"
+        }
+
+        return jsonify(result)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(host='0.0.0.0', port=7860)

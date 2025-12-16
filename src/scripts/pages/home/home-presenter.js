@@ -15,8 +15,16 @@ export function showRiskResult(response) {
       throw new Error('Required elements not found');
     }
 
-    const riskCategory = (data.riskCategory || 'low').toLowerCase();
-    const riskValue = data.risk || 0;
+    // Handle both old format (riskCategory/risk) and new format (riskLevel/riskPercentage)
+    let riskValue = data.riskPercentage || data.risk || 0;
+    let riskLevel = data.riskLevel || data.riskCategory || 'low';
+    
+    // Convert riskLevel text to category key
+    let riskCategory = 'low';
+    if (riskLevel === 'Tinggi' || riskLevel === 'high') riskCategory = 'high';
+    else if (riskLevel === 'Sedang' || riskLevel === 'medium') riskCategory = 'medium';
+    else if (riskLevel === 'Rendah' || riskLevel === 'low') riskCategory = 'low';
+    
     const style = riskStyles[riskCategory] || riskStyles.low;
 
     // Update display
@@ -30,6 +38,8 @@ export function showRiskResult(response) {
       border: `2px solid ${style.border}`,
       color: style.color
     });
+
+    console.log('[RiskResult] Risk:', riskValue + '%', 'Category:', riskCategory, 'Level:', riskLevel);
 
     // Scroll to result
     setTimeout(() => {

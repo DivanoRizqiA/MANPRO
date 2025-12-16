@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Connection</title>
+</head>
+<body>
+    <h1>Test API Connection</h1>
+    <button onclick="testSignup()">Test Signup</button>
+    <button onclick="testSignin()">Test Signin</button>
+    <button onclick="testDirect()">Test Direct Backend</button>
+    <div id="result"></div>
+
+    <script>
+        async function testSignup() {
+            const resultDiv = document.getElementById('result');
+            try {
+                const timestamp = Date.now();
+                const res = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: `test${timestamp}@example.com`,
+                        password: 'test123'
+                    })
+                });
+                const data = await res.json();
+                resultDiv.innerHTML = `<pre>Status: ${res.status}\n${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<pre style="color:red">Error: ${error.message}</pre>`;
+            }
+        }
+
+        async function testSignin() {
+            const resultDiv = document.getElementById('result');
+            try {
+                const res = await fetch('/api/auth/signin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'test@example.com',
+                        password: 'test123'
+                    })
+                });
+                const data = await res.json();
+                resultDiv.innerHTML = `<pre>Status: ${res.status}\n${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<pre style="color:red">Error: ${error.message}</pre>`;
+            }
+        }
+
+        async function testDirect() {
+            const resultDiv = document.getElementById('result');
+            try {
+                const timestamp = Date.now();
+                const res = await fetch('http://localhost:7000/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: `test${timestamp}@example.com`,
+                        password: 'test123'
+                    })
+                });
+                const data = await res.json();
+                resultDiv.innerHTML = `<pre>Status: ${res.status}\n${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<pre style="color:red">Error: ${error.message}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

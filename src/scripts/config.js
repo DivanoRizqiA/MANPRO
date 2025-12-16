@@ -1,6 +1,6 @@
 const CONFIG = {
-  // Use same-origin relative API path; dev server proxies /api to backend
-  BASE_URL: '/api',
+  // Direct connection to backend (no proxy needed)
+  BASE_URL: 'http://localhost:7000/api',
 };
 
 export default CONFIG;

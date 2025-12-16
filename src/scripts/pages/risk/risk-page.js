@@ -1,4 +1,4 @@
-import { addCheck } from '../../data/api.js';
+import { addCheck, analyzeRisk } from '../../data/api.js';
 import { showRiskResult } from '../home/home-presenter.js';
 
 export default class RiskPage {
@@ -116,7 +116,9 @@ export default class RiskPage {
       e.preventDefault();
       const fd = new FormData(form);
       const height = Number(fd.get('height')); const weight = Number(fd.get('weight')); const hM = height/100; const bmi = (weight/(hM*hM)).toFixed(2);
-      const data = {
+      
+      // Data for MongoDB (includes height, weight)
+      const dataForDb = {
         Pregnancies: Number(fd.get('pregnancies')),
         Glucose: Number(fd.get('glucose')),
         BloodPressure: Number(fd.get('bloodPressure')),
@@ -127,27 +129,46 @@ export default class RiskPage {
         BMI: Number(bmi),
         DiabetesPedigreeFunction: Number(fd.get('diabetesPedigree')),
         Age: Number(fd.get('age')),
+        Outcome: 0
       };
-      if (Object.values(data).some(v => isNaN(v))) { alert('Harap isi semua kolom dengan benar.'); return; }
+      
+      // Data for analysis API (only 9 fields required by LLM.py)
+      const analysisData = {
+        Pregnancies: Number(fd.get('pregnancies')),
+        Glucose: Number(fd.get('glucose')),
+        BloodPressure: Number(fd.get('bloodPressure')),
+        SkinThickness: Number(fd.get('skinThickness')),
+        Insulin: Number(fd.get('insulin')),
+        BMI: Number(bmi),
+        DiabetesPedigreeFunction: Number(fd.get('diabetesPedigree')),
+        Age: Number(fd.get('age')),
+        Outcome: 0
+      };
+      
+      if (Object.values(analysisData).some(v => isNaN(v))) { alert('Harap isi semua kolom dengan benar.'); return; }
       try {
         const token = localStorage.getItem('token');
         if (!token) { alert('Login dahulu untuk mengecek'); return; }
-        const response = await addCheck(data);
+        
+        console.log('[Risk Check] Submitting analysis data:', analysisData);
+        console.log('[Risk Check] DB data:', dataForDb);
+        
+        const response = await analyzeRisk(analysisData);
         if (response.error) throw new Error(response.error);
+        
+        console.log('[Risk Check] Response:', response);
+        
+        // Save to history (addCheck) with full data including height/weight
+        await addCheck(dataForDb);
+        
+        // Show result with risk percentage
         showRiskResult(response);
 
-        // Placeholder: simple rule-based suggestions until LLM integration
-        if (recoList) {
-          const suggestions = [];
-          if (data.BMI >= 25) suggestions.push('Pertimbangkan penurunan berat badan bertahap (0.5–1 kg/minggu).');
-          if (data.Glucose >= 100) suggestions.push('Konsultasi pemeriksaan gula darah lanjutan dan evaluasi pola makan.');
-          if (data.BloodPressure >= 130) suggestions.push('Batasi garam, kelola stres, dan evaluasi tekanan darah rutin.');
-          if (data.Insulin >= 25) suggestions.push('Diskusikan dengan dokter terkait resistensi insulin dan intervensi gaya hidup.');
-          if (suggestions.length === 0) suggestions.push('Pertahankan kebiasaan baik Anda: aktivitas fisik rutin dan pola makan seimbang.');
-          // Render suggestions
-          recoList.innerHTML = suggestions.map(s => `<li class="reco-item">${s}</li>`).join('');
+        // Show LLM analysis recommendations if available
+        if (response.analysis && recoList) {
+          recoList.innerHTML = `<li class="reco-item" style="white-space:pre-wrap;">${response.analysis}</li>`;
         }
-      } catch (err) { console.error(err); alert(err.message || 'Terjadi kesalahan.'); }
+      } catch (err) { console.error('[Risk Check] Error:', err); alert(err.message || 'Terjadi kesalahan.'); }
     });
   }
 }

@@ -12,29 +12,49 @@ function getAuthHeader() {
 }
 
 export async function signUp(email, password) {
-  const res = await fetch(`${API_BASE}/auth/signup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.msg || data.message || 'Sign up failed');
+  try {
+    console.log('Sending signup request to:', `${API_BASE}/auth/signup`);
+    const res = await fetch(`${API_BASE}/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    
+    console.log('Signup response status:', res.status);
+    const data = await res.json().catch(() => ({}));
+    console.log('Signup response data:', data);
+    
+    if (!res.ok) {
+      throw new Error(data.msg || data.message || 'Sign up failed');
+    }
+    return data;
+  } catch (error) {
+    console.error('Signup fetch error:', error);
+    throw error;
   }
-  return data;
 }
 
 export async function signIn(email, password) {
-  const res = await fetch(`${API_BASE}/auth/signin`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.msg || data.message || 'Login failed');
+  try {
+    console.log('Sending signin request to:', `${API_BASE}/auth/signin`);
+    const res = await fetch(`${API_BASE}/auth/signin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    
+    console.log('Signin response status:', res.status);
+    const data = await res.json().catch(() => ({}));
+    console.log('Signin response data:', data);
+    
+    if (!res.ok) {
+      throw new Error(data.msg || data.message || 'Login failed');
+    }
+    return data; // includes { token: "..." }
+  } catch (error) {
+    console.error('Signin fetch error:', error);
+    throw error;
   }
-  return data; // includes { token: "..." }
 }
 
 export async function addCheck(data) {
@@ -97,14 +117,53 @@ export async function requestPasswordReset(email) {
 }
 
 export async function resetPassword(token, password) {
-  const res = await fetch(`${API_BASE}/auth/reset-password`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, password }),
-  });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.msg || errorData.message || 'Gagal mereset kata sandi');
+  try {
+    console.log('Sending password reset request to:', `${API_BASE}/auth/reset-password`);
+    const res = await fetch(`${API_BASE}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.msg || data.message || 'Gagal mereset kata sandi');
+    }
+    return data;
+  } catch (error) {
+    console.error('Password reset fetch error:', error);
+    throw error;
   }
-  return res.json();
+}
+
+export async function analyzeRisk(diabetesData) {
+  try {
+    console.log('Sending analyze request to:', `${API_BASE}/analysis`);
+    console.log('Data:', diabetesData);
+    const res = await fetch(`${API_BASE}/analysis`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      },
+      body: JSON.stringify(diabetesData)
+    });
+    
+    console.log('Analyze response status:', res.status);
+    const data = await res.json().catch(() => ({}));
+    console.log('Analyze response data:', data);
+    
+    if (!res.ok) {
+      throw new Error(data.message || 'Analisis gagal');
+    }
+    
+    // Return response dengan struktur yang benar untuk risk page
+    return {
+      riskPercentage: data.data?.riskPercentage || 0,
+      riskLevel: data.data?.riskLevel || 'Rendah',
+      analysis: data.data?.analysis || ''
+    };
+  } catch (error) {
+    console.error('Analyze fetch error:', error);
+    throw error;
+  }
 }

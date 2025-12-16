@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="favicon-heart.png">
+
+    <title>Diateksi</title>
+  </head>
+  <body>
+    <!-- Global site title bar -->
+    <header class="site-title-bar" role="banner">
+      <div class="site-title-inner">
+        <h1 class="site-title-text">Diateksi</h1>
+        <img src="/images/Vector.png" alt="Logo" class="site-title-logo" />
+      </div>
+    </header>
+    
+
+    <!-- Sidebar drawer -->
+    <aside id="sidebar" class="sidebar" aria-hidden="true">
+      <div class="sidebar-inner">
+        <div class="sidebar-header">
+          <div class="brand">
+            <img src="/images/Vector.png" alt="Diateksi" class="brand-icon" />
+            <span class="brand-name">Diateksi</span>
+          </div>
+          <button id="sidebar-close" class="hamburger small" aria-label="Close menu">
+            <img src="/images/Vector.png" alt="Close" class="menu-img" />
+          </button>
+        </div>
+
+        <a href="#/profile" class="sidebar-user" aria-label="Buka Profil">
+          <div class="avatar">U</div>
+          <div class="user-meta">
+            <div class="user-name" id="sidebar-user-name">User</div>
+            <div class="user-email" id="sidebar-user-email">user@email.com</div>
+          </div>
+        </a>
+
+        <nav class="sidebar-nav">
+          <a href="#/home" class="side-item" data-target="dashboard"><img src="/images/home.png" alt="Home" class="side-icon" /><span class="label">Dashboard</span></a>
+
+          <a href="#/risk" class="side-item" data-target="risk"><img src="/images/testtube.png" alt="Risk Checker" class="side-icon" /><span class="label">Risk Checker</span></a>
+          <a href="#/history" class="side-item" data-target="history"><img src="/images/history.png" alt="History" class="side-icon" /><span class="label">History</span></a>
+          <a href="#/about" class="side-item" data-target="about"><img src="/images/about.png" alt="About" class="side-icon" /><span class="label">About</span></a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button id="sidebar-logout" class="logout-cta">↪ Logout</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Sidebar backdrop -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+    <div id="loading" class="loading-spinner">
+      <div class="spinner"></div>
+    </div>
+
+    <main id="main-content" class="main-content"></main>
+  </body>
+</html>

@@ -127,6 +127,112 @@ Motivasi: Anda masih memiliki waktu untuk membuat perubahan sebelum masalahnya m
     
     return mock_response
 
+def calculate_risk_percentage(input_data: dict):
+    """
+    Hitung persentase risiko diabetes berdasarkan parameter kesehatan
+    
+    Algorithm berdasarkan faktor-faktor klinis:
+    - Glucose: >126 mg/dL adalah diabetes
+    - BMI: >30 adalah obese
+    - Age: >45 tahun meningkatkan risiko
+    - BloodPressure: >90 mmHg diastolic adalah hipertensi
+    - Insulin: >100 mcU/mL menunjukkan resistansi insulin
+    - DiabetesPedigreeFunction: predisposisi genetik
+    - Pregnancies: lebih banyak kehamilan = risiko lebih tinggi
+    """
+    glucose = input_data.get('Glucose', 100)
+    bmi = input_data.get('BMI', 25)
+    age = input_data.get('Age', 40)
+    blood_pressure = input_data.get('BloodPressure', 70)
+    insulin = input_data.get('Insulin', 80)
+    dpf = input_data.get('DiabetesPedigreeFunction', 0.3)
+    pregnancies = input_data.get('Pregnancies', 0)
+    outcome = input_data.get('Outcome', 0)
+    
+    risk_score = 0.0
+    
+    # 1. Glucose contribution (40%)
+    if glucose >= 126:  # Diabetes threshold
+        risk_score += 40
+    elif glucose >= 100:  # Prediabetes threshold
+        risk_score += 25 + (glucose - 100) * 0.5
+    elif glucose >= 90:
+        risk_score += 10 + (glucose - 90) * 0.5
+    else:
+        risk_score += max(0, (100 - glucose) * 0.1)
+    
+    # 2. BMI contribution (25%)
+    if bmi >= 30:  # Obese
+        risk_score += 25
+    elif bmi >= 25:  # Overweight
+        risk_score += 15 + (bmi - 25) * 2
+    elif bmi >= 18.5:  # Normal
+        risk_score += max(0, (25 - bmi) * 0.5)
+    else:  # Underweight
+        risk_score += 5
+    
+    # 3. Age contribution (15%)
+    if age >= 65:
+        risk_score += 15
+    elif age >= 45:
+        risk_score += 8 + (age - 45) * 0.3
+    elif age >= 35:
+        risk_score += 3 + (age - 35) * 0.3
+    else:
+        risk_score += max(0, (35 - age) * 0.05)
+    
+    # 4. Blood Pressure contribution (10%)
+    if blood_pressure >= 90:
+        risk_score += 10
+    elif blood_pressure >= 80:
+        risk_score += 5 + (blood_pressure - 80) * 0.5
+    else:
+        risk_score += max(0, (80 - blood_pressure) * 0.1)
+    
+    # 5. Insulin contribution (5%)
+    if insulin >= 100:
+        risk_score += 5
+    elif insulin >= 80:
+        risk_score += 2 + (insulin - 80) * 0.15
+    else:
+        risk_score += max(0, (80 - insulin) * 0.02)
+    
+    # 6. Diabetes Pedigree Function contribution (3%)
+    if dpf >= 0.8:
+        risk_score += 3
+    elif dpf >= 0.5:
+        risk_score += 2 + (dpf - 0.5) * 2
+    elif dpf >= 0.3:
+        risk_score += 1 + (dpf - 0.3) * 5
+    else:
+        risk_score += max(0, dpf * 3)
+    
+    # 7. Pregnancies contribution (2%)
+    if pregnancies >= 5:
+        risk_score += 2
+    elif pregnancies >= 2:
+        risk_score += 1 + (pregnancies - 2) * 0.3
+    
+    # Clamp between 0-100
+    risk_percentage = min(100, max(0, risk_score))
+    
+    return risk_percentage
+
+def determine_risk_level(risk_percentage):
+    """
+    Tentukan level risiko berdasarkan persentase
+    """
+    if risk_percentage >= 80:
+        return "Sangat Tinggi"
+    elif risk_percentage >= 60:
+        return "Tinggi"
+    elif risk_percentage >= 40:
+        return "Sedang"
+    elif risk_percentage >= 20:
+        return "Rendah"
+    else:
+        return "Sangat Rendah"
+
 def analyze_diabetes_data(input_data: dict):
     """
     Menganalisis data diabetes menggunakan Gemini AI
@@ -221,6 +327,13 @@ if __name__ == "__main__":
             input_data = json.loads(input_json)
             print(f"[LOG] Data berhasil di-parse", file=sys.stderr)
             
+            # Calculate risk percentage based on input data
+            risk_percentage = calculate_risk_percentage(input_data)
+            risk_level = determine_risk_level(risk_percentage)
+            
+            print(f"[LOG] Risk Percentage: {risk_percentage:.1f}%", file=sys.stderr)
+            print(f"[LOG] Risk Level: {risk_level}", file=sys.stderr)
+            
             # Call analyze_diabetes_data - akan return mock jika quota habis
             analysis = analyze_diabetes_data(input_data)
             
@@ -228,8 +341,8 @@ if __name__ == "__main__":
             output = json.dumps({
                 "success": True,
                 "analysis": analysis,
-                "riskPercentage": 50.0,
-                "riskLevel": "Sedang"
+                "riskPercentage": round(risk_percentage, 1),
+                "riskLevel": risk_level
             }, ensure_ascii=False)
             print(output)
             

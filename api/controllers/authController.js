@@ -61,6 +61,118 @@ exports.login = async (req, res) => {
   }
 };
 
+// Get user profile
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ msg: 'User tidak ditemukan' });
+    }
+    
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name || user.email.split('@')[0]
+      }
+    });
+  } catch (err) {
+    console.error('Get profile error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+// Update user profile (name and email)
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, email } = req.body;
+    
+    if (!name && !email) {
+      return res.status(400).json({ msg: 'Minimal harus update name atau email' });
+    }
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ msg: 'User tidak ditemukan' });
+    }
+    
+    // Check if new email already exists (if changing email)
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ msg: 'Email sudah terdaftar' });
+      }
+      user.email = email;
+    }
+    
+    if (name) {
+      user.name = name;
+    }
+    
+    user.updatedAt = new Date();
+    await user.save();
+    
+    console.log('Profile updated for user:', userId);
+    res.json({
+      success: true,
+      message: 'Profil berhasil diperbarui',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+// Change password
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { oldPassword, newPassword } = req.body;
+    
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ msg: 'Password lama dan baru harus diisi' });
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ msg: 'Password baru minimal 6 karakter' });
+    }
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ msg: 'User tidak ditemukan' });
+    }
+    
+    // Verify old password
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ msg: 'Password lama tidak sesuai' });
+    }
+    
+    // Hash and save new password
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.updatedAt = new Date();
+    await user.save();
+    
+    console.log('Password changed for user:', userId);
+    res.json({
+      success: true,
+      message: 'Password berhasil diubah'
+    });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
 // Simple placeholder implementations for password reset flow.
 // Integrate with your email provider and secure token storage as needed.
 exports.forgotPassword = async (req, res) => {

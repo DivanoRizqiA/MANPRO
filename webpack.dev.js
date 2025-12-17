@@ -2,6 +2,8 @@ const path = require('path');
 const common = require('./webpack.common.js');
 const { merge } = require('webpack-merge');
 
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) || 9000 : 9000;
+
 module.exports = merge(common, {
   mode: 'development',
   module: {
@@ -17,7 +19,7 @@ module.exports = merge(common, {
   },
   devServer: {
     static: path.resolve(__dirname, 'dist'),
-    port: 9000,
+    port: PORT,
     host: 'localhost',
     // Use HTTP instead of HTTPS for better proxy stability
     // Proxy API calls to backend

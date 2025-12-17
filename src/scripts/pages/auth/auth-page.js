@@ -794,6 +794,10 @@ export default class AuthPage {
             if (response.token) {
               // ✅ Save token for authenticated requests
               localStorage.setItem('token', response.token);
+              // ✅ Also persist email so sidebar profile shows up
+              localStorage.setItem('email', email);
+              // Optional flash message for consistency
+              localStorage.setItem('flash', JSON.stringify({ message: 'Pendaftaran berhasil. Selamat datang!', type: 'success' }));
               alert('Sign up successful! You are now logged in.');
               window.location.hash = '/';
             } else {

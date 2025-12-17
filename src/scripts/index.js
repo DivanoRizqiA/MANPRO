@@ -241,14 +241,9 @@ function initSidebar() {
 
   // Populate profile
   const email = localStorage.getItem('email');
-  if (email && sideEmail) {
-    sideEmail.textContent = email;
-    if (sideName) sideName.textContent = email.split('@')[0];
-    if (avatar) avatar.textContent = (email.charAt(0) || 'U').toUpperCase();
-  } else {
-    const userSection = document.querySelector('.sidebar-user');
-    if (userSection) userSection.style.display = 'none';
-  }
+  if (sideEmail) sideEmail.textContent = email || 'user@email.com';
+  if (sideName) sideName.textContent = (email ? email.split('@')[0] : 'User');
+  if (avatar) avatar.textContent = ((email ? email.charAt(0) : 'U') || 'U').toUpperCase();
 
   const openSidebar = () => {
     if (!isMobile()) return;

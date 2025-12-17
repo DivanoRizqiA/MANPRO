@@ -1843,3 +1843,93 @@ body {
 @media (max-width: 860px) {
   .about-items { grid-template-columns: 1fr; }
 }
+
+/* --- Health Recommendations Section (LLM Analysis) --- */
+.health-reco-section {
+  margin: 24px 0;
+}
+
+.reco-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  position: relative;
+  backdrop-filter: saturate(160%) blur(3px);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.reco-card:hover {
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08), 0 14px 34px rgba(15, 23, 42, 0.14);
+  transform: translateY(-2px);
+}
+
+.reco-inner {
+  padding: 24px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.reco-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+}
+
+.reco-item {
+  color: #334155;
+  font-size: 14.5px;
+  line-height: 1.8;
+  margin: 0;
+  padding: 0;
+  
+  /* Text wrapping and overflow handling */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+  
+  /* Prevent horizontal overflow */
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  
+  /* Better text rendering */
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  -moz-hyphens: auto;
+  text-align: justify;
+}
+
+/* Format headings in LLM analysis */
+.reco-item strong {
+  color: #0f172a;
+  font-weight: 700;
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.reco-item strong:first-child {
+  margin-top: 0;
+}
+
+/* Format numbered sections */
+.reco-item::first-line {
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 760px) {
+  .reco-inner {
+    padding: 20px;
+  }
+  
+  .reco-item {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+}

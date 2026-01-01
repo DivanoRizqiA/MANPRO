@@ -173,33 +173,168 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-// Simple placeholder implementations for password reset flow.
-// Integrate with your email provider and secure token storage as needed.
+// Import crypto dan email service untuk password reset
+const crypto = require('crypto');
+const emailService = require('../utils/emailService');
+
+/**
+ * Forgot Password - Kirim email reset password
+ */
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
-    const user = await User.findOne({ email });
-    // Respond with success regardless to avoid account enumeration
-    if (!user) {
-      return res.json({ msg: 'If the email exists, a reset link was sent.' });
+    console.log('[FORGOT PASSWORD] Request for:', email);
+
+    // Selalu response success untuk hindari account enumeration
+    const successMessage = 'Jika email terdaftar, link reset password telah dikirim ke email Anda';
+
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        msg: 'Email harus diisi' 
+      });
     }
-    // TODO: Generate reset token, store securely, and send email.
-    res.json({ msg: 'Reset link sent (placeholder).' });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    
+    if (!user) {
+      // Tetap return success untuk security (hindari enumeration)
+      console.log('[FORGOT PASSWORD] Email not found:', email);
+      return res.json({ 
+        success: true, 
+        msg: successMessage 
+      });
+    }
+
+    // Generate reset token (random 32 bytes -> hex string)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Hash token untuk disimpan di database (security best practice)
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Set token dan expiry (1 jam dari sekarang)
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+    await user.save();
+
+    console.log('[FORGOT PASSWORD] Token generated for:', email);
+
+    // Kirim email dengan token (bukan hashed token)
+    try {
+      await emailService.sendPasswordResetEmail(
+        user.email,
+        resetToken, // Kirim token asli, bukan yang di-hash
+        user.name || user.email.split('@')[0]
+      );
+      console.log('[FORGOT PASSWORD] Email sent successfully to:', email);
+    } catch (emailError) {
+      console.error('[FORGOT PASSWORD] Failed to send email:', emailError);
+      // Reset token jika email gagal
+      user.resetPasswordToken = null;
+      user.resetPasswordExpires = null;
+      await user.save();
+      
+      return res.status(500).json({
+        success: false,
+        msg: 'Gagal mengirim email. Silakan coba lagi.'
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      msg: successMessage 
+    });
+
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    console.error('[FORGOT PASSWORD] Error:', err);
+    res.status(500).json({ 
+      success: false, 
+      msg: 'Server error. Silakan coba lagi.' 
+    });
   }
 };
 
+/**
+ * Reset Password - Verify token dan update password
+ */
 exports.resetPassword = async (req, res) => {
   const { token, password } = req.body;
+  
   try {
-    // TODO: Verify token, find user, and update password.
-    if (!password || typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({ msg: 'Password too short' });
+    console.log('[RESET PASSWORD] Attempting password reset');
+
+    if (!token) {
+      return res.status(400).json({ 
+        success: false, 
+        msg: 'Token reset password diperlukan' 
+      });
     }
-    // Placeholder: accept request but do not change anything without token logic
-    res.json({ msg: 'Password reset successful (placeholder).' });
+
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        msg: 'Password minimal 6 karakter' 
+      });
+    }
+
+    // Hash token yang diterima untuk dicocokkan dengan database
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Cari user dengan token yang valid dan belum expired
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      console.log('[RESET PASSWORD] Invalid or expired token');
+      return res.status(400).json({
+        success: false,
+        msg: 'Token tidak valid atau sudah kadaluarsa. Silakan request reset password baru.'
+      });
+    }
+
+    console.log('[RESET PASSWORD] Valid token for user:', user.email);
+
+    // Hash password baru
+    user.password = await bcrypt.hash(password, 10);
+    
+    // Hapus reset token
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    user.updatedAt = new Date();
+    
+    await user.save();
+
+    console.log('[RESET PASSWORD] Password updated for:', user.email);
+
+    // Kirim email notifikasi password berhasil diubah
+    try {
+      await emailService.sendPasswordChangedEmail(
+        user.email,
+        user.name || user.email.split('@')[0]
+      );
+    } catch (emailError) {
+      // Tidak perlu fail jika email notifikasi gagal
+      console.error('[RESET PASSWORD] Failed to send confirmation email:', emailError);
+    }
+
+    res.json({ 
+      success: true, 
+      msg: 'Password berhasil direset. Silakan login dengan password baru.' 
+    });
+
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    console.error('[RESET PASSWORD] Error:', err);
+    res.status(500).json({ 
+      success: false, 
+      msg: 'Server error. Silakan coba lagi.' 
+    });
   }
 };

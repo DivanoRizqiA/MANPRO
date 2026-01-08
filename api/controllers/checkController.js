@@ -120,21 +120,126 @@ exports.addCheck = async (req, res) => {
     const heightInMeters = Height / 100;
     const calculatedBMI = (Weight / (heightInMeters * heightInMeters)).toFixed(2);
 
-    // Call the ML prediction API
-    console.log('[INFO] Memanggil ML prediction API...');
-    const mlResponse = await axios.post('https://vano00-diateksi.hf.space/predict', {
-      Pregnancies,
-      Glucose,
-      BloodPressure,
-      SkinThickness,
-      Insulin,
-      BMI: calculatedBMI,
-      DiabetesPedigreeFunction,
-      Age
-    });
+    // Call the ML prediction API with retry and timeout
+    console.log('[INFO] Memanggil ML prediction API di HuggingFace...');
+    
+    let mlResponse;
+    let retries = 3;
+    let lastError;
+
+    // Retry mechanism untuk handle HuggingFace cold start
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`[INFO] Attempt ${attempt}/${retries} ke HuggingFace API...`);
+        
+        mlResponse = await axios.post(
+          'https://vano00-Diateksi.hf.space/predict',
+          {
+            Pregnancies: Number(Pregnancies),
+            Glucose: Number(Glucose),
+            BloodPressure: Number(BloodPressure),
+            SkinThickness: Number(SkinThickness),
+            Insulin: Number(Insulin),
+            BMI: parseFloat(calculatedBMI),
+            DiabetesPedigreeFunction: Number(DiabetesPedigreeFunction),
+            Age: Number(Age)
+          },
+          {
+            timeout: 30000, // 30 detik timeout
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        // Validasi response dari HuggingFace
+        if (!mlResponse.data) {
+          throw new Error('Empty response from ML API');
+        }
+
+        // Log raw response untuk debugging
+        console.log('[DEBUG] Raw HuggingFace response:', JSON.stringify(mlResponse.data));
+
+        // Parse response dari HuggingFace format: {probability: number, status: string}
+        const { probability, status } = mlResponse.data;
+
+        // Validasi probability
+        const riskNum = Number(probability);
+        if (isNaN(riskNum) || riskNum < 0 || riskNum > 100) {
+          throw new Error(`Invalid probability: ${probability} (type: ${typeof probability}). Expected 0-100. Full response: ${JSON.stringify(mlResponse.data)}`);
+        }
+
+        // Konversi status ke prediction (0 atau 1)
+        let predictionNum;
+        if (typeof status === 'string') {
+          const statusLower = status.toLowerCase();
+          if (statusLower.includes('diabetes') && !statusLower.includes('tidak')) {
+            predictionNum = 1; // Diabetes positif
+          } else if (statusLower.includes('tidak')) {
+            predictionNum = 0; // Tidak diabetes
+          } else {
+            // Fallback: gunakan threshold probability
+            predictionNum = riskNum > 50 ? 1 : 0;
+          }
+        } else {
+          throw new Error(`Invalid status value: ${status} (type: ${typeof status}). Expected string. Full response: ${JSON.stringify(mlResponse.data)}`);
+        }
+
+        console.log('[SUCCESS] ML Prediction dari HuggingFace:', { 
+          prediction: predictionNum, 
+          risk_percentage: riskNum,
+          status: status,
+          attempt 
+        });
+        
+        // Update mlResponse.data dengan format yang konsisten
+        mlResponse.data.prediction = predictionNum;
+        mlResponse.data.risk_percentage = riskNum;
+        mlResponse.data.original_status = status;
+        
+        break; // Berhasil, keluar dari loop
+
+      } catch (error) {
+        lastError = error;
+        
+        if (error.code === 'ECONNABORTED') {
+          console.warn(`[WARN] Attempt ${attempt}: HuggingFace API timeout (${error.message})`);
+        } else if (error.response) {
+          console.error(`[ERROR] Attempt ${attempt}: HuggingFace API error:`, {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data
+          });
+          
+          // Jika 503 (service unavailable), kemungkinan cold start
+          if (error.response.status === 503 && attempt < retries) {
+            console.log(`[INFO] HuggingFace space mungkin cold start, retry dalam 5 detik...`);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            continue;
+          }
+        } else if (error.request) {
+          console.error(`[ERROR] Attempt ${attempt}: No response dari HuggingFace API`);
+        } else {
+          console.error(`[ERROR] Attempt ${attempt}: ${error.message}`);
+        }
+
+        // Jika sudah attempt terakhir, throw error
+        if (attempt === retries) {
+          throw new Error(
+            `Failed to get prediction from HuggingFace after ${retries} attempts. ` +
+            `Last error: ${lastError.message}`
+          );
+        }
+
+        // Delay sebelum retry berikutnya
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
 
     const { prediction, risk_percentage } = mlResponse.data;
-    console.log('[INFO] ML Prediction:', { prediction, risk_percentage });
+    console.log('[INFO] Final ML Prediction:', { prediction, risk_percentage });
 
     // Determine risk category based on percentage
     let riskCategory = 'low';
@@ -154,7 +259,8 @@ exports.addCheck = async (req, res) => {
       BMI: parseFloat(calculatedBMI),
       DiabetesPedigreeFunction,
       Age,
-      Outcome: prediction // 0 atau 1 dari ML prediction
+      Outcome: prediction, // 0 atau 1 dari ML prediction
+      risk_percentage: risk_percentage // Tambahkan risk percentage dari HuggingFace
     };
 
     // Get AI analysis from Gemini

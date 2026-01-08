@@ -1,12 +1,12 @@
-#pip install google-genai
+#pip install google-generativeai
 #pip install python-dotenv
 
 import os
 import sys
 import json
+import urllib.request
+import urllib.error
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
 
 # Set UTF-8 encoding for stdout
 sys.stdout.reconfigure(encoding='utf-8')
@@ -127,100 +127,9 @@ Motivasi: Anda masih memiliki waktu untuk membuat perubahan sebelum masalahnya m
     
     return mock_response
 
-def calculate_risk_percentage(input_data: dict):
-    """
-    Hitung persentase risiko diabetes berdasarkan parameter kesehatan
-    
-    Algorithm berdasarkan faktor-faktor klinis:
-    - Glucose: >126 mg/dL adalah diabetes
-    - BMI: >30 adalah obese
-    - Age: >45 tahun meningkatkan risiko
-    - BloodPressure: >90 mmHg diastolic adalah hipertensi
-    - Insulin: >100 mcU/mL menunjukkan resistansi insulin
-    - DiabetesPedigreeFunction: predisposisi genetik
-    - Pregnancies: lebih banyak kehamilan = risiko lebih tinggi
-    """
-    glucose = input_data.get('Glucose', 100)
-    bmi = input_data.get('BMI', 25)
-    age = input_data.get('Age', 40)
-    blood_pressure = input_data.get('BloodPressure', 70)
-    insulin = input_data.get('Insulin', 80)
-    dpf = input_data.get('DiabetesPedigreeFunction', 0.3)
-    pregnancies = input_data.get('Pregnancies', 0)
-    outcome = input_data.get('Outcome', 0)
-    
-    risk_score = 0.0
-    
-    # 1. Glucose contribution (40%)
-    if glucose >= 126:  # Diabetes threshold
-        risk_score += 40
-    elif glucose >= 100:  # Prediabetes threshold
-        risk_score += 25 + (glucose - 100) * 0.5
-    elif glucose >= 90:
-        risk_score += 10 + (glucose - 90) * 0.5
-    else:
-        risk_score += max(0, (100 - glucose) * 0.1)
-    
-    # 2. BMI contribution (25%)
-    if bmi >= 30:  # Obese
-        risk_score += 25
-    elif bmi >= 25:  # Overweight
-        risk_score += 15 + (bmi - 25) * 2
-    elif bmi >= 18.5:  # Normal
-        risk_score += max(0, (25 - bmi) * 0.5)
-    else:  # Underweight
-        risk_score += 5
-    
-    # 3. Age contribution (15%)
-    if age >= 65:
-        risk_score += 15
-    elif age >= 45:
-        risk_score += 8 + (age - 45) * 0.3
-    elif age >= 35:
-        risk_score += 3 + (age - 35) * 0.3
-    else:
-        risk_score += max(0, (35 - age) * 0.05)
-    
-    # 4. Blood Pressure contribution (10%)
-    if blood_pressure >= 90:
-        risk_score += 10
-    elif blood_pressure >= 80:
-        risk_score += 5 + (blood_pressure - 80) * 0.5
-    else:
-        risk_score += max(0, (80 - blood_pressure) * 0.1)
-    
-    # 5. Insulin contribution (5%)
-    if insulin >= 100:
-        risk_score += 5
-    elif insulin >= 80:
-        risk_score += 2 + (insulin - 80) * 0.15
-    else:
-        risk_score += max(0, (80 - insulin) * 0.02)
-    
-    # 6. Diabetes Pedigree Function contribution (3%)
-    if dpf >= 0.8:
-        risk_score += 3
-    elif dpf >= 0.5:
-        risk_score += 2 + (dpf - 0.5) * 2
-    elif dpf >= 0.3:
-        risk_score += 1 + (dpf - 0.3) * 5
-    else:
-        risk_score += max(0, dpf * 3)
-    
-    # 7. Pregnancies contribution (2%)
-    if pregnancies >= 5:
-        risk_score += 2
-    elif pregnancies >= 2:
-        risk_score += 1 + (pregnancies - 2) * 0.3
-    
-    # Clamp between 0-100
-    risk_percentage = min(100, max(0, risk_score))
-    
-    return risk_percentage
-
 def determine_risk_level(risk_percentage):
     """
-    Tentukan level risiko berdasarkan persentase
+    Tentukan level risiko berdasarkan persentase dari ML model HuggingFace
     """
     if risk_percentage >= 80:
         return "Sangat Tinggi"
@@ -235,7 +144,7 @@ def determine_risk_level(risk_percentage):
 
 def analyze_diabetes_data(input_data: dict):
     """
-    Menganalisis data diabetes menggunakan Gemini AI
+    Menganalisis data diabetes menggunakan OpenRouter (Gemini Model)
     
     Args:
         input_data (dict): Dictionary berisi data pasien dengan keys:
@@ -243,74 +152,121 @@ def analyze_diabetes_data(input_data: dict):
             - Insulin, BMI, DiabetesPedigreeFunction, Age, Outcome
     
     Returns:
-        str: Hasil analisis dari Gemini AI
+        str: Hasil analisis dari AI
     """
     try:
         # Validate API key
-        api_key = os.environ.get("GEMINI_API_KEY")
+        # Cek OPENROUTER_API_KEY dulu, fallback ke GEMINI_API_KEY jika user belum ganti nama variabel
+        api_key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("GEMINI_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY tidak ditemukan di environment variables")
+            raise ValueError("OPENROUTER_API_KEY tidak ditemukan di environment variables")
         
-        print(f"[LOG] Menginisialisasi Gemini AI client...", file=sys.stderr)
-        client = genai.Client(api_key=api_key)
+        print(f"[LOG] Menginisialisasi OpenRouter client...", file=sys.stderr)
+        
+        # Menggunakan model Qwen via OpenRouter
+        # User request: "Qwen 2.5 / Qwen 3 (Instruct)"
+        model_name = "qwen/qwen-2.5-72b-instruct" 
 
         # Buat prompt untuk analisis lengkap dan mudah dipahami
-        prompt = f"""
-Anda adalah dokter spesialis berpengalaman 20 tahun yang ahli dalam menjelaskan penyakit diabetes kepada pasien awam tanpa latar belakang medis. 
+        prompt_content = f"""
+Anda adalah dokter spesialis berpengalaman 20 tahun. Tugas Anda adalah menjelaskan hasil tes medis kepada pasien awam dengan format POINT-PER-POINT yang sangat terstruktur.
 
-DATA MEDIS PASIEN:
-- Riwayat Kehamilan: {input_data['Pregnancies']} kali
-- Kadar Glukosa Darah: {input_data['Glucose']} mg/dL (Normal puasa: 70-100 mg/dL)
-- Tekanan Darah Diastolik: {input_data['BloodPressure']} mmHg (Normal: <80 mmHg)
-- Ketebalan Kulit Trisep: {input_data['SkinThickness']} mm
-- Level Insulin Serum: {input_data['Insulin']} mcU/mL
-- BMI: {input_data['BMI']} (Normal: 18.5-24.9, Overweight: 25-29.9, Obesitas: >=30)
-- Diabetes Pedigree Function: {input_data['DiabetesPedigreeFunction']}
-- Usia: {input_data['Age']} tahun
-- Diagnosis: {'DIABETES POSITIF' if input_data['Outcome'] == 1 else 'TIDAK DIABETES'}
+DATA PASIEN:
+- Glukosa: {input_data.get('Glucose', '-')}
+- BMI: {input_data.get('BMI', '-')}
+- Tekanan Darah: {input_data.get('BloodPressure', '-')}
+- Insulin: {input_data.get('Insulin', '-')}
+- Usia: {input_data.get('Age', '-')}
+- Kehamilan: {input_data.get('Pregnancies', '-')}
+- Ketebalan Kulit: {input_data.get('SkinThickness', '-')}
+- Riwayat Keluarga (Pedigree): {input_data.get('DiabetesPedigreeFunction', '-')}
+- Prediksi AI: {'BERISIKO DIABETES' if input_data.get('Outcome') == 1 else 'TIDAK BERISIKO DIABETES'}
 
-Buatlah analisis medis yang LENGKAP DAN DETAIL dengan bahasa yang SANGAT MUDAH DIPAHAMI untuk pasien awam. Jelaskan SETIAP parameter kesehatan dengan detail (3-5 kalimat per parameter). Gunakan analogi sehari-hari dan contoh konkret agar mudah dipahami. 
+INSTRUKSI FORMAT JAWABAN (WAJIB DIIKUTI):
+Saya ingin Anda menganalisis SETIAP parameter satu per satu. Jangan gabungkan. Format output harus persis seperti ini:
 
-Analisis harus mencakup:
-1. Penjelasan detail setiap parameter (Glukosa, BMI, Tekanan Darah, Usia, dll)
-2. Diagnosis dan analisis penyakit lengkap
-3. Panduan makan dengan menu konkret
-4. Program olahraga detail
-5. Gaya hidup yang harus diubah
-6. Monitoring kesehatan rutin
-7. Kapan harus ke dokter
-8. Kesimpulan dan motivasi
+1. **Glukosa** ({input_data.get('Glucose', '-')} mg/dL)
+   [Analisis mendalam tentang nilai glukosa pasien ini. Apakah normal? Apa dampaknya? Gunakan analogi mudah.]
 
-Gunakan format yang mudah dibaca dengan header yang jelas. TOTAL MINIMAL 2500-3000 KATA.
+2. **BMI** ({input_data.get('BMI', '-')} kg/m²)
+   [Analisis mendalam tentang BMI pasien ini. Apakah berat badan ideal? Apa resikonya?]
+
+3. **Tekanan Darah** ({input_data.get('BloodPressure', '-')} mmHg)
+   [Analisis mendalam tentang tekanan darah diastolik pasien ini.]
+
+4. **Insulin** ({input_data.get('Insulin', '-')} mcU/mL)
+   [Analisis level insulin serum pasien.]
+
+5. **Usia** ({input_data.get('Age', '-')} tahun)
+   [Analisis risiko berdasarkan usia.]
+
+6. **Kehamilan** ({input_data.get('Pregnancies', '-')} kali)
+   [Analisis pengaruh riwayat kehamilan terhadap risiko diabetes.]
+
+7. **Ketebalan Kulit** ({input_data.get('SkinThickness', '-')} mm)
+   [Analisis indikator lemak tubuh ini.]
+
+8. **Riwayat Keluarga / Pedigree Function** ({input_data.get('DiabetesPedigreeFunction', '-')})
+   [Analisis probabilitas genetik.]
+
+---
+**KESIMPULAN DAN REKOMENDASI TERPERINCI**
+[Berikan kesimpulan diagnosa, lalu daftar rekomendasi yang SANGAT SPESIFIK untuk Menu Makanan (Pagi/Siang/Malam), Jadwal Olahraga, dan Kapan Harus ke Dokter]
 """
 
-        print(f"[LOG] Mengirim request ke Gemini AI...", file=sys.stderr)
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
-            contents=prompt,
-            config={
-                "temperature": 0.7,
-                "top_p": 0.9,
-                "top_k": 40,
-                "max_output_tokens": 8000,
-            }
-        )
-
-        print(f"[LOG] Response berhasil diterima dari Gemini AI", file=sys.stderr)
-        return response.text
+        print(f"[LOG] Mengirim request ke OpenRouter ({model_name})...", file=sys.stderr)
+        
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/BackendR/ManPro", # Referer required/recommended by OpenRouter
+            "X-Title": "ManPro Health Analysis"
+        }
+        
+        data = {
+            "model": model_name,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt_content
+                }
+            ],
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "max_tokens": 4000 # Set limit token cukup besar agar tidak terpotong
+        }
+        
+        req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers=headers)
+        
+        with urllib.request.urlopen(req) as response:
+            response_body = response.read().decode('utf-8')
+            result = json.loads(response_body)
+            
+            if 'choices' in result and len(result['choices']) > 0:
+                print(f"[LOG] Response berhasil diterima dari OpenRouter", file=sys.stderr)
+                return result['choices'][0]['message']['content']
+            else:
+                msg = f"Invalid response format: {str(result)}"
+                print(f"[ERROR] {msg}", file=sys.stderr)
+                raise Exception(msg)
     
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8')
+        print(f"[ERROR] HTTP Error OpenRouter: {e.code} - {error_body}", file=sys.stderr)
+        
+        # Fallback ke mock response untuk error quota/rate limit
+        if e.code == 429 or e.code == 402: # 402 is Payment Required
+            print(f"[WARNING] OpenRouter quota/credit issue, menggunakan mock response", file=sys.stderr)
+        else:
+            print(f"[WARNING] Error dari OpenRouter API ({e.code}), menggunakan mock response", file=sys.stderr)
+        
+        return generate_mock_analysis(input_data)
+        
     except Exception as e:
         error_str = str(e)
         print(f"[ERROR] Error dalam analyze_diabetes_data: {error_str}", file=sys.stderr)
-        
-        # Fallback ke mock response untuk SEMUA error (quota, network, model not found, dll)
-        if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-            print(f"[WARNING] Gemini API quota habis, menggunakan mock response", file=sys.stderr)
-        elif "404" in error_str or "NOT_FOUND" in error_str:
-            print(f"[WARNING] Model tidak ditemukan, menggunakan mock response", file=sys.stderr)
-        else:
-            print(f"[WARNING] Error dari Gemini API, menggunakan mock response", file=sys.stderr)
-        
+        # Fallback ke mock response
         return generate_mock_analysis(input_data)
 
 
@@ -327,8 +283,16 @@ if __name__ == "__main__":
             input_data = json.loads(input_json)
             print(f"[LOG] Data berhasil di-parse", file=sys.stderr)
             
-            # Calculate risk percentage based on input data
-            risk_percentage = calculate_risk_percentage(input_data)
+            # WAJIB menggunakan risk_percentage dari ML model HuggingFace
+            if 'risk_percentage' not in input_data or input_data['risk_percentage'] is None:
+                error_msg = "risk_percentage is required from HuggingFace ML model"
+                print(f"[ERROR] {error_msg}", file=sys.stderr)
+                print(json.dumps({"success": False, "error": error_msg}))
+                sys.exit(1)
+            
+            risk_percentage = float(input_data['risk_percentage'])
+            print(f"[LOG] Using ML model risk percentage from HuggingFace: {risk_percentage:.2f}%", file=sys.stderr)
+            
             risk_level = determine_risk_level(risk_percentage)
             
             print(f"[LOG] Risk Percentage: {risk_percentage:.1f}%", file=sys.stderr)

@@ -1,8 +1,10 @@
 const { spawn } = require('child_process');
 const path = require('path');
+const axios = require('axios');
 
 /**
  * Controller untuk analisis diabetes menggunakan Gemini AI
+ * HARUS memanggil HuggingFace API terlebih dahulu untuk prediksi ML
  */
 exports.analyzeDiabetes = async (req, res) => {
     try {
@@ -41,7 +43,60 @@ exports.analyzeDiabetes = async (req, res) => {
             });
         }
 
-        // Prepare data untuk dikirim ke Python
+        // STEP 1: Panggil HuggingFace API untuk prediksi ML
+        console.log('[INFO] Memanggil HuggingFace API untuk prediksi ML...');
+        let mlResponse;
+        try {
+            mlResponse = await axios.post(
+                'https://vano00-MANPRO.hf.space/predict',
+                {
+                    Pregnancies: Number(Pregnancies),
+                    Glucose: Number(Glucose),
+                    BloodPressure: Number(BloodPressure),
+                    SkinThickness: Number(SkinThickness),
+                    Insulin: Number(Insulin),
+                    BMI: Number(BMI),
+                    DiabetesPedigreeFunction: Number(DiabetesPedigreeFunction),
+                    Age: Number(Age)
+                },
+                {
+                    timeout: 30000,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            console.log('[DEBUG] HuggingFace response:', JSON.stringify(mlResponse.data));
+        } catch (error) {
+            console.error('[ERROR] Gagal memanggil HuggingFace API:', error.message);
+            return res.status(500).json({
+                success: false,
+                message: 'Gagal mendapatkan prediksi dari model ML',
+                error: error.message
+            });
+        }
+
+        // Parse response dari HuggingFace
+        const { probability, status } = mlResponse.data;
+        const risk_percentage = Number(probability);
+        
+        // Konversi status ke prediction
+        let prediction;
+        if (typeof status === 'string') {
+            const statusLower = status.toLowerCase();
+            if (statusLower.includes('diabetes') && !statusLower.includes('tidak')) {
+                prediction = 1;
+            } else {
+                prediction = 0;
+            }
+        } else {
+            prediction = risk_percentage > 50 ? 1 : 0;
+        }
+
+        console.log('[SUCCESS] ML Prediction:', { prediction, risk_percentage, status });
+
+        // STEP 2: Prepare data untuk dikirim ke Python LLM
         const diabetesData = {
             Pregnancies,
             Glucose,
@@ -51,10 +106,11 @@ exports.analyzeDiabetes = async (req, res) => {
             BMI,
             DiabetesPedigreeFunction,
             Age,
-            Outcome
+            Outcome: prediction, // Gunakan prediksi dari ML
+            risk_percentage: risk_percentage // WAJIB kirim risk_percentage dari HuggingFace
         };
 
-        console.log('[INFO] Data pasien:', JSON.stringify(diabetesData, null, 2));
+        console.log('[INFO] Data untuk LLM.py:', JSON.stringify(diabetesData, null, 2));
 
         // Path ke Python script dan virtual environment
         // Coba beberapa path kemungkinan

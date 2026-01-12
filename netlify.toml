@@ -1,0 +1,11 @@
+[build]
+  # Command untuk build project
+  command = "npm run build"
+  
+  # Directory hasil build yang akan di-publish
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

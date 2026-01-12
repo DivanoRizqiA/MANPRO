@@ -48,7 +48,7 @@ exports.analyzeDiabetes = async (req, res) => {
         let mlResponse;
         try {
             mlResponse = await axios.post(
-                'https://vano00-MANPRO.hf.space/predict',
+                'https://vano00-Diateksi.hf.space/predict',
                 {
                     Pregnancies: Number(Pregnancies),
                     Glucose: Number(Glucose),
@@ -77,21 +77,31 @@ exports.analyzeDiabetes = async (req, res) => {
             });
         }
 
-        // Parse response dari HuggingFace
-        const { probability, status } = mlResponse.data;
-        const risk_percentage = Number(probability);
+        // Parse response dari HuggingFace (Support kedua format)
+        let risk_percentage, prediction, status;
         
-        // Konversi status ke prediction
-        let prediction;
-        if (typeof status === 'string') {
-            const statusLower = status.toLowerCase();
-            if (statusLower.includes('diabetes') && !statusLower.includes('tidak')) {
-                prediction = 1;
-            } else {
-                prediction = 0;
-            }
+        if (mlResponse.data.risk_percentage !== undefined) {
+             // Format baru
+             risk_percentage = Number(mlResponse.data.risk_percentage);
+             prediction = Number(mlResponse.data.prediction);
+             status = prediction === 1 ? 'Diabetes' : 'Tidak Diabetes';
         } else {
-            prediction = risk_percentage > 50 ? 1 : 0;
+             // Format lama fallback
+             const { probability, status: oldStatus } = mlResponse.data;
+             risk_percentage = Number(probability);
+             status = oldStatus;
+             
+             // Konversi status ke prediction
+             if (typeof status === 'string') {
+                 const statusLower = status.toLowerCase();
+                 if (statusLower.includes('diabetes') && !statusLower.includes('tidak')) {
+                     prediction = 1;
+                 } else {
+                     prediction = 0;
+                 }
+             } else {
+                 prediction = risk_percentage > 50 ? 1 : 0;
+             }
         }
 
         console.log('[SUCCESS] ML Prediction:', { prediction, risk_percentage, status });

@@ -20,8 +20,13 @@ function encrypt(text) {
 
 function decrypt(text) {
   if (!text) return text;
+  // If input is not a string (e.g. it's already a number from old data), return it as is
+  if (typeof text !== 'string') return text;
+  
   try {
     const key = getEncryptionKey();
+    if (!text.includes(':')) return text; // Not in IV:Content format
+    
     const textParts = text.split(':');
     const iv = Buffer.from(textParts[0], 'hex');
     const encryptedText = Buffer.from(textParts[1], 'hex');

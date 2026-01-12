@@ -32,73 +32,120 @@ def analyze_diabetes_data(input_data: dict):
         if not api_key:
             raise ValueError("GEMINI_API_KEY tidak ditemukan di environment variables")
         
-        print(f"[LOG] Menginisialisasi Gemini AI client...", file=sys.stderr)
+        print(f"[LOG] Menginisialisasi Gemini AI client", file=sys.stderr)
         genai.configure(api_key=api_key)
         
-        # Gunakan model Gemini 1.5 Flash
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        # Daftar model prioritas (Fallback Strategy)
+        models_to_try = [
+            'gemini-2.0-flash-lite',
+            'gemini-2.0-flash',
+            'gemini-2.5-pro',
+            'gemini-2.5-flash-lite',
+            'gemini-2.5-flash',
+            'gemini-3-flash-preview',
+            'gemini-3-pro-preview'
+        ]
+
+        # Determine risk label based on percentage
+        try:
+            risk_pct = float(input_data.get('risk_percentage', 0))
+            if risk_pct <= 30:
+                risk_label = "RISIKO RENDAH"
+            elif risk_pct <= 70:
+                risk_label = "RISIKO SEDANG"
+            else:
+                risk_label = "RISIKO TINGGI"
+        except:
+            risk_label = 'RISIKO TINGGI' if input_data.get('Outcome') == 1 else 'RISIKO RENDAH'
 
         # Buat prompt untuk analisis lengkap dan mudah dipahami
         prompt = f"""
-Anda adalah dokter spesialis berpengalaman 20 tahun. Tugas Anda adalah menjelaskan hasil tes medis kepada pasien awam dengan format POINT-PER-POINT yang sangat terstruktur.
+Bertindaklah sebagai Dokter Spesialis Endokrinologi Senior.
+Lakukan analisis mendalam terhadap hasil screening kesehatan berikut dan jelaskan hasilnya kepada pasien awam.
+Gunakan format profesional yang sopan, tenang, dan sangat mudah dipahami.
+Hindari jargon medis tanpa penjelasan.
+Fokus pada edukasi yang memberdayakan pasien.
+JANGAN mengulangi instruksi ini dalam respon Anda.
+Mulailah respon Anda dengan sapaan standar: Yth. Bapak/Ibu, berikut adalah hasil analisis kesehatan Anda yang telah saya pelajari.
+HINDARI penggunaan karakter seperti tanda kutip ganda atau tanda bintang ganda atau emoji dalam respon Anda. Gunakan format plain text yang rapi.
 
-DATA PASIEN:
-- Glukosa: {input_data.get('Glucose', '-')}
-- BMI: {input_data.get('BMI', '-')}
-- Tekanan Darah: {input_data.get('BloodPressure', '-')}
-- Insulin: {input_data.get('Insulin', '-')}
-- Usia: {input_data.get('Age', '-')}
-- Kehamilan: {input_data.get('Pregnancies', '-')}
-- Ketebalan Kulit: {input_data.get('SkinThickness', '-')}
-- Riwayat Keluarga (Pedigree): {input_data.get('DiabetesPedigreeFunction', '-')}
-- Prediksi AI: {'BERISIKO DIABETES' if input_data.get('Outcome') == 1 else 'TIDAK BERISIKO DIABETES'}
+DATA MEDIS PASIEN:
+- Glukosa: {input_data.get('Glucose', '-')} mg/dL (Kadar Gula Darah)
+- BMI (Body Mass Index): {input_data.get('BMI', '-')} kg/m²
+- Tekanan Darah Diastolik: {input_data.get('BloodPressure', '-')} mmHg
+- Insulin Serum: {input_data.get('Insulin', '-')} mcU/mL
+- Usia: {input_data.get('Age', '-')} tahun
+- Jumlah Kehamilan: {input_data.get('Pregnancies', '-')} 
+- Ketebalan Lipatan Kulit (Skin Thickness): {input_data.get('SkinThickness', '-')} mm
+- Skor Riwayat Keturunan (Pedigree): {input_data.get('DiabetesPedigreeFunction', '-')}
+- PREDIKSI AI AWAL: {risk_label} DIABETES (Probabilitas: {input_data.get('risk_percentage', '-') }%)
 
-INSTRUKSI FORMAT JAWABAN (WAJIB DIIKUTI):
-Saya ingin Anda menganalisis SETIAP parameter satu per satu. Jangan gabungkan. Format output harus persis seperti ini:
+PERMINTAAN ANALISIS POINT-BY-POINT (WAJIB IKUTI FORMAT INI):
 
-1. **Glukosa** ({input_data.get('Glucose', '-')} mg/dL)
-   [Analisis mendalam tentang nilai glukosa pasien ini. Apakah normal? Apa dampaknya? Gunakan analogi mudah.]
+1. Gula Darah (Glukosa)
+   Status [NORMAL / WASPADA / TINGGI]
+   Penjelasan [Jelaskan apakah angka ini aman. Gunakan analogi sederhana, misal: bensin dalam tangki.]
 
-2. **BMI** ({input_data.get('BMI', '-')} kg/m²)
-   [Analisis mendalam tentang BMI pasien ini. Apakah berat badan ideal? Apa resikonya?]
+2. Berat Badan & BMI
+   Status [KURUS / IDEAL / GEMUK / OBESITAS]
+   Penjelasan [Jelaskan hubungan berat badan pasien ini dengan risiko kesehatan.]
 
-3. **Tekanan Darah** ({input_data.get('BloodPressure', '-')} mmHg)
-   [Analisis mendalam tentang tekanan darah diastolik pasien ini.]
+3. Tekanan Darah
+   Status [OPTIMAL / NORMAL / TINGGI]
+   Penjelasan [Analisis tekanan darah diastolik pasien.]
 
-4. **Insulin** ({input_data.get('Insulin', '-')} mcU/mL)
-   [Analisis level insulin serum pasien.]
+4. Kadar Insulin
+   Penjelasan [Jelaskan fungsi insulin sebagai kunci pembuka sel gula. Apakah kadar ini wajar?]
 
-5. **Usia** ({input_data.get('Age', '-')} tahun)
-   [Analisis risiko berdasarkan usia.]
-
-6. **Kehamilan** ({input_data.get('Pregnancies', '-')} kali)
-   [Analisis pengaruh riwayat kehamilan terhadap risiko diabetes.]
-
-7. **Ketebalan Kulit** ({input_data.get('SkinThickness', '-')} mm)
-   [Analisis indikator lemak tubuh ini.]
-
-8. **Riwayat Keluarga / Pedigree Function** ({input_data.get('DiabetesPedigreeFunction', '-')})
-   [Analisis probabilitas genetik.]
+5. Faktor Risiko Lainnya
+   Usia & Kehamilan [Analisis risiko kelompok umur dan riwayat kehamilan]
+   Riwayat Keluarga [Jelaskan seberapa besar pengaruh genetik bagi pasien ini]
+   Lainnya [Analisis indikator fisik lain jika ada]
 
 ---
-**KESIMPULAN DAN REKOMENDASI TERPERINCI**
-[Berikan kesimpulan diagnosa, lalu daftar rekomendasi yang SANGAT SPESIFIK untuk Menu Makanan (Pagi/Siang/Malam), Jadwal Olahraga, dan Kapan Harus ke Dokter]
+KESIMPULAN DOKTER
+[Berikan rangkuman diagnosa satu paragraf yang menenangkan namun jujur.]
+
+RESEP GAYA HIDUP SEHAT (PERSONALIZED STARTER PACK)
+Mohon berikan rekomendasi konkrit dan bisa langsung dipraktekkan besok:
+1. Pola Makan [Saran menu pagi, siang, malam yang spesifik. Hindari apa?]
+2. Aktivitas Fisik [Jenis olahraga ringan yang cocok dan durasinya]
+3. Tindakan Medis [Kapan harus cek lab ulang atau ke Rumah Sakit?]
 """
 
-        print(f"[LOG] Mengirim request ke Gemini AI...", file=sys.stderr)
+        print(f"[LOG] Mengirim request ke Gemini AI via Loop Fallback", file=sys.stderr)
         
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.7,
-                top_p=0.9,
-                top_k=40,
-                max_output_tokens=8000,
-            )
-        )
+        last_exception = None
         
-        print(f"[LOG] Response berhasil diterima dari Gemini AI", file=sys.stderr)
-        return response.text
+        # Loop fallback: coba setiap model berurutan jika yang sebelumnya gagal
+        for model_name in models_to_try:
+            try:
+                print(f"[LOG] MENCOBA MODEL: {model_name}", file=sys.stderr)
+                model = genai.GenerativeModel(model_name)
+                
+                response = model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.7,
+                        top_p=0.9,
+                        top_k=40,
+                        max_output_tokens=8000,
+                    )
+                )
+                
+                print(f"[LOG] BERHASIL: Response diterima dari {model_name}", file=sys.stderr)
+                return response.text
+                
+            except Exception as e:
+                print(f"[WARNING] GAGAL pada {model_name}: {str(e)}", file=sys.stderr)
+                last_exception = e
+                continue # Lanjut ke model berikutnya dalam list
+        
+        # Jika loop selesai tanpa return, berarti semua model gagal
+        if last_exception:
+            raise last_exception
+        else:
+            raise Exception("Semua model Gemini dalam daftar gagal merespons.")
     
     except Exception as e:
         error_str = str(e)
@@ -132,6 +179,14 @@ if __name__ == "__main__":
             
             print(f"[LOG] Risk Percentage: {risk_percentage:.1f}%", file=sys.stderr)
             
+            # Determine risk label for output
+            if risk_percentage <= 30:
+                risk_label = "RISIKO RENDAH"
+            elif risk_percentage <= 70:
+                risk_label = "RISIKO SEDANG"
+            else:
+                risk_label = "RISIKO TINGGI"
+
             # Call analyze_diabetes_data
             analysis = analyze_diabetes_data(input_data)
             
@@ -140,6 +195,7 @@ if __name__ == "__main__":
                 "success": True,
                 "analysis": analysis,
                 "riskPercentage": round(risk_percentage, 1),
+                "riskLevel": risk_label
             }, ensure_ascii=False)
             print(output)
             

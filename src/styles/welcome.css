@@ -1,0 +1,332 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(180deg, #b8d4f1 0%, #c8ddf3 50%, #e8f0f9 100%);
+    min-height: 100vh;
+}
+
+/* ===== Welcome page viewport-fit layout (no scroll) ===== */
+.welcome-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* prevent scroll on welcome only */
+    padding: 20px;
+}
+
+.welcome-page .container {
+    max-width: 1100px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 60px; /* reduced gap to fit viewport */
+    padding: 0 20px;
+}
+
+.welcome-page .logo { margin-bottom: 24px; }
+.welcome-page .main-title { font-size: 34px; margin-bottom: 10px; }
+
+.welcome-page .right-content { max-width: 560px; }
+.welcome-page .illustration-container { width: 420px; height: 460px; }
+.welcome-page .med-items-image { width: 100%; max-width: 520px; max-height: 80vh; height: auto; animation: float 4s ease-in-out infinite; }
+
+@media (max-width: 968px) {
+    .welcome-page .container { flex-direction: column; gap: 32px; }
+    .welcome-page .main-title { font-size: 28px; }
+}
+
+@media (max-width: 480px) {
+    .welcome-page .main-title { font-size: 26px; }
+    .welcome-page .buttons { flex-direction: column; }
+    .welcome-page .btn { width: 100%; }
+    .welcome-page .illustration-container { transform: scale(0.9); }
+}
+
+.navbar {
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: transparent;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vector-icon {
+    width: 45px;
+    height: 45px;
+    object-fit: contain;
+}
+
+.nav-brand span {
+    font-size: 30px;
+    font-weight: 700;
+    color: #000;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.nav-link {
+    background: none;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    color: #000;
+    cursor: pointer;
+    padding: 8px 16px;
+}
+
+.nav-btn {
+    background: #000;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+    background: #1a1a1a;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 20px;
+    }
+
+    .nav-links {
+        gap: 10px;
+    }
+
+    .nav-btn {
+        padding: 6px 16px;
+    }
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(180deg, #b8d4f1 0%, #c8ddf3 50%, #e8f0f9 100%);
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1100px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 100px;
+    padding: 0 40px;
+}
+
+.left-content {
+    flex: 1;
+    max-width: 480px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 50px;
+}
+
+.heartbeat-icon {
+    width: 45px;
+    height: 45px;
+    background: #2563eb;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.heartbeat-line {
+    width: 28px;
+    height: 3px;
+    background: white;
+    position: relative;
+}
+
+.heartbeat-line::before,
+.heartbeat-line::after {
+    content: '';
+    position: absolute;
+    width: 7px;
+    height: 14px;
+    background: white;
+}
+
+.heartbeat-line::before {
+    left: -6px;
+    top: -5.5px;
+    transform: skewX(-15deg);
+}
+
+.heartbeat-line::after {
+    right: -6px;
+    top: -5.5px;
+    transform: skewX(15deg);
+}
+
+.logo h1 {
+    font-size: 30px;
+    font-weight: 700;
+    color: #000;
+    letter-spacing: -0.5px;
+}
+
+.greeting {
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+}
+
+.main-title {
+    font-size: 38px;
+    font-weight: 900;
+    color: #000;
+    line-height: 1.25;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: #1e293b;
+    line-height: 1.7;
+    margin-bottom: 28px;
+    font-weight: 400;
+}
+
+.buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.btn {
+    padding: 12px 28px;
+    border-radius: 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+    background: #000;
+    color: white;
+}
+
+.btn:hover {
+    background: #1a1a1a;
+    transform: translateY(-1px);
+}
+
+.right-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    max-width: 450px;
+}
+
+.illustration-container {
+    position: relative;
+    width: 350px;
+    height: 400px;
+}
+
+.medical-box {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 260px;
+    height: 200px;
+    background: linear-gradient(180deg, #e8ecf1 0%, #d5dce5 100%);
+    border-radius: 18px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+}
+
+.box-opening {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 35px;
+    background: linear-gradient(180deg, #c5ced9 0%, #b0bbc9 100%);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.floating-items {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 280px;
+}
+
+.medical-item {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease;
+}
+
+@media (max-width: 968px) {
+    .container {
+        flex-direction: column;
+        gap: 60px;
+    }
+
+    .main-title {
+        font-size: 32px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-title {
+        font-size: 28px;
+    }
+
+    .buttons {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .illustration-container {
+        transform: scale(0.85);
+    }
+}

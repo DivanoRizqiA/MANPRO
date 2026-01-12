@@ -15,21 +15,29 @@ export function showRiskResult(response) {
       throw new Error('Required elements not found');
     }
 
-    // Handle both old format (riskCategory/risk) and new format (riskLevel/riskPercentage)
-    let riskValue = data.riskPercentage || data.risk || 0;
-    let riskLevel = data.riskLevel || data.riskCategory || 'low';
-    
-    // Convert riskLevel text to category key
+    // Handle both old format (risk/riskCategory) and new format (riskPercentage/riskLevel)
+    const riskValueNum = Number(data.riskPercentage ?? data.risk ?? 0);
+    const riskLevelRaw = data.riskLevel || data.riskCategory || '';
+
+    // Derive risk category primarily from numeric percentage (to avoid text mismatches)
     let riskCategory = 'low';
-    if (riskLevel === 'Tinggi' || riskLevel === 'high') riskCategory = 'high';
-    else if (riskLevel === 'Sedang' || riskLevel === 'medium') riskCategory = 'medium';
-    else if (riskLevel === 'Rendah' || riskLevel === 'low') riskCategory = 'low';
+    if (!Number.isNaN(riskValueNum)) {
+      if (riskValueNum > 70) riskCategory = 'high';
+      else if (riskValueNum > 50) riskCategory = 'medium';
+      else riskCategory = 'low';
+    } else {
+      // Fallback: infer from textual level with robust matching
+      const rl = String(riskLevelRaw).toLowerCase();
+      if (rl.includes('tinggi') || rl.includes('high')) riskCategory = 'high';
+      else if (rl.includes('sedang') || rl.includes('medium')) riskCategory = 'medium';
+      else if (rl.includes('rendah') || rl.includes('low')) riskCategory = 'low';
+    }
     
     const style = riskStyles[riskCategory] || riskStyles.low;
 
     // Update display
     container.style.display = 'block';
-    percentageEl.textContent = Number(riskValue).toFixed(2) + '%';
+    percentageEl.textContent = (Number.isNaN(riskValueNum) ? 0 : riskValueNum).toFixed(2) + '%';
     labelEl.textContent = style.text;
 
     // Apply styling
@@ -39,7 +47,7 @@ export function showRiskResult(response) {
       color: style.color
     });
 
-    console.log('[RiskResult] Risk:', riskValue + '%', 'Category:', riskCategory, 'Level:', riskLevel);
+    console.log('[RiskResult] Risk:', (Number.isNaN(riskValueNum) ? 0 : riskValueNum) + '%', 'Category:', riskCategory, 'Level:', riskLevelRaw);
 
     // Scroll to result
     setTimeout(() => {

@@ -160,42 +160,52 @@ exports.addCheck = async (req, res) => {
         // Log raw response untuk debugging
         console.log('[DEBUG] Raw HuggingFace response:', JSON.stringify(mlResponse.data));
 
-        // Parse response dari HuggingFace format: {probability: number, status: string}
-        const { probability, status } = mlResponse.data;
+        let riskNum, predictionNum, statusStr;
 
-        // Validasi probability
-        const riskNum = Number(probability);
-        if (isNaN(riskNum) || riskNum < 0 || riskNum > 100) {
-          throw new Error(`Invalid probability: ${probability} (type: ${typeof probability}). Expected 0-100. Full response: ${JSON.stringify(mlResponse.data)}`);
+        // Cek format response (support format lama dan baru)
+        if (mlResponse.data.risk_percentage !== undefined) {
+            // Format baru: {prediction: 1, risk_percentage: 82.24}
+            riskNum = Number(mlResponse.data.risk_percentage);
+            predictionNum = Number(mlResponse.data.prediction);
+            statusStr = predictionNum === 1 ? 'Diabetes' : 'Tidak Diabetes';
+        } else if (mlResponse.data.probability !== undefined) {
+            // Format lama: {probability: 82.24, status: "Berisiko Diabetes"}
+            riskNum = Number(mlResponse.data.probability);
+            statusStr = mlResponse.data.status;
+            
+            // Konversi status ke prediction
+            if (typeof statusStr === 'string') {
+              const statusLower = statusStr.toLowerCase();
+              if (statusLower.includes('diabetes') && !statusLower.includes('tidak')) {
+                predictionNum = 1; 
+              } else if (statusLower.includes('tidak')) {
+                predictionNum = 0; 
+              } else {
+                predictionNum = riskNum > 50 ? 1 : 0;
+              }
+            } else {
+                predictionNum = riskNum > 50 ? 1 : 0;
+            }
+        } else {
+             throw new Error(`Unknown response format. Full response: ${JSON.stringify(mlResponse.data)}`);
         }
 
-        // Konversi status ke prediction (0 atau 1)
-        let predictionNum;
-        if (typeof status === 'string') {
-          const statusLower = status.toLowerCase();
-          if (statusLower.includes('diabetes') && !statusLower.includes('tidak')) {
-            predictionNum = 1; // Diabetes positif
-          } else if (statusLower.includes('tidak')) {
-            predictionNum = 0; // Tidak diabetes
-          } else {
-            // Fallback: gunakan threshold probability
-            predictionNum = riskNum > 50 ? 1 : 0;
-          }
-        } else {
-          throw new Error(`Invalid status value: ${status} (type: ${typeof status}). Expected string. Full response: ${JSON.stringify(mlResponse.data)}`);
+        // Validasi probability
+        if (isNaN(riskNum) || riskNum < 0 || riskNum > 100) {
+          throw new Error(`Invalid probability: ${riskNum}. Expected 0-100. Full response: ${JSON.stringify(mlResponse.data)}`);
         }
 
         console.log('[SUCCESS] ML Prediction dari HuggingFace:', { 
           prediction: predictionNum, 
           risk_percentage: riskNum,
-          status: status,
+          status: statusStr,
           attempt 
         });
         
         // Update mlResponse.data dengan format yang konsisten
         mlResponse.data.prediction = predictionNum;
         mlResponse.data.risk_percentage = riskNum;
-        mlResponse.data.original_status = status;
+        mlResponse.data.original_status = statusStr;
         
         break; // Berhasil, keluar dari loop
 

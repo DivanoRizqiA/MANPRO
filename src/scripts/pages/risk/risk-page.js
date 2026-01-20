@@ -72,7 +72,7 @@ export default class RiskPage {
         <section id="health-recommendations" class="health-reco-section" aria-live="polite" style="margin-top:24px;display:none;">
           <div class="health-info-section">
             <h3 class="section-title">Analisis Kesehatan Detail</h3>
-            <p class="section-description">Berikut adalah analisis lengkap dari AI berdasarkan data kesehatan yang Anda masukkan. Gunakan toolbar untuk membuka semua, salin, atau unduh hasil.</p>
+            <p class="section-description">Berikut adalah analisis lengkap dari AI berdasarkan data kesehatan yang Anda masukkan. Gunakan toolbar untuk membuka semua, atau salin.</p>
           </div>
           <div class="reco-toolbar" role="toolbar" aria-label="Aksi analisis">
             <button type="button" class="btn-ghost" id="reco-expand-all">Buka Semua</button>
@@ -326,7 +326,7 @@ export default class RiskPage {
                 .filter(line => line.length > 0);
 
               const body = bodyLines.join('<br>').trim();
-              return { id: idx, title, body, riskMeta };
+              return { id: idx, title, body, bodyItems: bodyLines, riskMeta };
             });
             return { sections, conclusion };
           };
@@ -372,7 +372,16 @@ export default class RiskPage {
                   <span class="toggle-label">Selengkapnya</span>
                   <svg class="chev" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>` : '';
-              const bodyEl = hasDetails ? `<div id="reco-body-${s.id}" class="reco-body" style="display:none;margin-top:8px;color:var(--text-muted);line-height:1.6;">${s.body}</div>` : '';
+              const bodyContent = hasDetails
+                ? ((s.bodyItems && s.bodyItems.length)
+                    ? `<ul style="margin:8px 0 0 0;padding:0;list-style:none;">${s.bodyItems.map(t => `
+                        <li style=\"display:flex;align-items:flex-start;gap:8px;margin:6px 0;\">
+                          <span style=\"flex:none;width:6px;height:6px;margin-top:8px;border-radius:50%;background:#94a3b8;\"></span>
+                          <span style=\"display:block;line-height:1.6;\">${t}</span>
+                        </li>`).join('')}</ul>`
+                    : s.body)
+                : '';
+              const bodyEl = hasDetails ? `<div id="reco-body-${s.id}" class="reco-body" style="display:none;margin-top:8px;color:var(--text-muted);line-height:1.6;">${bodyContent}</div>` : '';
               const barColor = s.riskMeta?.color || '#16a34a';
               const barPct = s.riskMeta?.percent ?? 33;
               const barLabel = s.riskMeta?.label || 'Rendah';
@@ -440,7 +449,7 @@ export default class RiskPage {
 
               // Render Kesimpulan Inti (if exists)
               if (buckets.summary.length) {
-                const items = buckets.summary.map(p => `<li style="margin:8px 0;padding-left:4px;">${p}</li>`).join('');
+                const items = buckets.summary.map(p => `<li style="margin:8px 0;padding-left:0;">${p}</li>`).join('');
                 const summaryCard = `
                 <li class="reco-item" style="background:linear-gradient(135deg, #5b86e5 0%, #36d1dc 100%);border:none;border-radius:12px;padding:24px;box-shadow:0 4px 16px rgba(91,134,229,0.25);margin-top:16px;">
                   <div class="reco-item-header" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
@@ -449,7 +458,7 @@ export default class RiskPage {
                     </svg>
                     <div class="reco-title" style="font-weight:700;color:#ffffff;font-size:18px;">Kesimpulan Inti</div>
                   </div>
-                  <div style="color:#ffffff;line-height:1.8;font-size:14.5px;"><ul style="margin:0 0 0 16px;padding:0;list-style:disc;">${items}</ul></div>
+                  <div style="color:#ffffff;line-height:1.8;font-size:14.5px;"><ul style="margin:0 0 0 16px;padding:0;list-style:none;">${items}</ul></div>
                 </li>`;
                 recoList.insertAdjacentHTML('beforeend', summaryCard);
               }
@@ -461,11 +470,12 @@ export default class RiskPage {
                   const list = items.map(t => `<li style="margin:6px 0;">${t}</li>`).join('');
                   return `<div style="margin-bottom:12px;"><div style="font-weight:600;color:#fff;margin-bottom:6px;font-size:14.5px;">${label}</div><ul style="margin:0 0 0 16px;padding:0;">${list}</ul></div>`;
                 };
+                const emoji = (c) => `<span style="font-family:'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Segoe UI Symbol',sans-serif">${c}</span>`;
                 const menuContent = [
-                  renderMeal('🌅 Pagi', buckets.menu.pagi),
-                  renderMeal('☀️ Siang', buckets.menu.siang),
-                  renderMeal('🌙 Malam', buckets.menu.malam),
-                  renderMeal('🍎 Camilan', buckets.menu.camilan),
+                  renderMeal(`${emoji('🌅')} Pagi`, buckets.menu.pagi),
+                  renderMeal(`${emoji('☀️')} Siang`, buckets.menu.siang),
+                  renderMeal(`${emoji('🌙')} Malam`, buckets.menu.malam),
+                  renderMeal(`${emoji('🍎')} Camilan`, buckets.menu.camilan),
                   buckets.menu.other.length ? `<div>${buckets.menu.other.map(t => `<p style="margin:6px 0;">${t}</p>`).join('')}</div>` : ''
                 ].filter(Boolean).join('');
 
